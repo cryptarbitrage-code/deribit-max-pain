@@ -14,7 +14,7 @@ pd.set_option('display.max_columns', None)  # useful for testing to display full
 
 # tkinter set up
 root = Tk()
-root.title("Historical Volatility Calculations - Cryptarbitrage")
+root.title("Deribit Max Pain - Cryptarbitrage")
 root.iconbitmap('cryptarbitrage_icon_96px.ico')
 root.minsize(400, 200)
 
@@ -151,7 +151,7 @@ def plot_charts():
     # adding the subplot
     plot1 = fig1.add_subplot(111)
     # calculate appropriate bar width based on strike range
-    bar_width = (df_selected['strike_price'].max() - df_selected['strike_price'].min()) / 200
+    bar_width = (df_selected['strike_price'].max() - df_selected['strike_price'].min()) / 250
     # plotting the graph
     plot1.bar(df_calls['strike_price'] + bar_width * 0.8, df_calls['open_interest'], label='Call OI', width=bar_width)
     plot1.bar(df_puts['strike_price'] - bar_width * 0.8, df_puts['open_interest'], label='Put OI', width=bar_width)
