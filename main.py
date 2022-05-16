@@ -1,3 +1,4 @@
+from datetime import datetime
 from tkinter import *
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -17,38 +18,93 @@ root.title("Historical Volatility Calculations - Cryptarbitrage")
 root.iconbitmap('cryptarbitrage_icon_96px.ico')
 root.minsize(400, 200)
 
-# fetch book summary and place into dataframe
-all_option_book_summary = get_book_summary_by_currency('BTC', 'option')
-df = pd.DataFrame(all_option_book_summary)
-
-# split the instrument name into separate columns
-expiry_date = []
-strike_price = []
-option_type = []
-for index in range(len(df)):
-    instrument_text = df.loc[index, 'instrument_name'].split('-')
-    expiry_date.append(instrument_text[1])
-    strike_price.append(float(instrument_text[2]))
-    option_type.append(instrument_text[3])
-df = df.assign(expiry_date=expiry_date)
-df = df.assign(strike_price=strike_price)
-df = df.assign(option_type=option_type)
-
-unique_expiry_dates = df['expiry_date'].unique()
-unique_expiry_dates.sort()
-
 # details frame
 details_frame = LabelFrame(root, text="Details", padx=2, pady=2)
 details_frame.grid(row=0, column=0, padx=2, pady=2, sticky=NW)
 selected_expiry = StringVar()
-selected_expiry.set(unique_expiry_dates[0])
-expiry_dropdown = OptionMenu(details_frame, selected_expiry, *unique_expiry_dates)
-expiry_dropdown.grid(row=5, column=0)
-expiry_dropdown.config(width=10)
+selected_currency = StringVar()
+selected_currency.set('BTC')
 
 # Chart frames
 chart1_frame = LabelFrame(root, text="Max Pain Chart", padx=2, pady=2)
 chart1_frame.grid(row=0, column=1, rowspan=2, padx=2, pady=2)
+
+
+def fetch_data(currency):
+    # fetch book summary and place into dataframe
+    all_option_book_summary = get_book_summary_by_currency(currency, 'option')
+    df = pd.DataFrame(all_option_book_summary)
+
+    # split the instrument name into separate columns
+    expiry_date = []
+    strike_price = []
+    option_type = []
+    for index in range(len(df)):
+        instrument_text = df.loc[index, 'instrument_name'].split('-')
+        expiry_date.append(instrument_text[1])
+        strike_price.append(float(instrument_text[2]))
+        option_type.append(instrument_text[3])
+    df = df.assign(expiry_date=expiry_date)
+    df = df.assign(strike_price=strike_price)
+    df = df.assign(option_type=option_type)
+
+    unique_expiry_dates = df['expiry_date'].unique()
+    unique_expiry_dates = sorted(unique_expiry_dates, key=lambda date: datetime.strptime(date, "%d%b%y"))
+
+    return df, unique_expiry_dates
+
+
+def details_state_1():
+    currency = selected_currency.get()
+    # set variables to global so plot_charts gets the updated values
+    # without having to fetch data from the API for every plot
+    global df, unique_expiry_dates
+    df, unique_expiry_dates = fetch_data(currency)
+    # details frame: State 1
+    for widgets in details_frame.winfo_children():
+        widgets.destroy()
+
+    current_currency = 'Current currency: ' + currency
+    current_currency_label = Label(details_frame, text=current_currency)
+    current_currency_label.grid(row=0, column=0, columnspan=2)
+    selected_expiry.set(unique_expiry_dates[0])
+    # button that allows changing the currency
+    change_currency_button = Button(master=details_frame,
+                                    command=details_state_2,
+                                    height=1,
+                                    width=18,
+                                    text="Change currency",
+                                    bg="#ccccff")
+    change_currency_button.grid(row=1, column=0, columnspan=2)
+    expiry_dropdown = OptionMenu(details_frame, selected_expiry, *unique_expiry_dates)
+    expiry_dropdown.grid(row=2, column=0)
+    expiry_dropdown.config(width=10)
+    # button that displays the plot
+    plot_button = Button(master=details_frame,
+                         command=plot_charts,
+                         height=1,
+                         width=18,
+                         text="Plot Chart",
+                         bg="#88bb88")
+    plot_button.grid(row=3, column=0, columnspan=2)
+
+
+def details_state_2():
+    # details frame: State 2
+    for widgets in details_frame.winfo_children():
+        widgets.destroy()
+
+    currency_dropdown = OptionMenu(details_frame, selected_currency, 'BTC', 'ETH', 'SOL')
+    currency_dropdown.grid(row=0, column=0)
+    currency_dropdown.config(width=10)
+    # button that sets the new currency
+    select_currency_button = Button(master=details_frame,
+                                    command=details_state_1,
+                                    height=1,
+                                    width=18,
+                                    text="Select currency",
+                                    bg="#ccccff")
+    select_currency_button.grid(row=1, column=0, columnspan=2)
 
 
 def calculate_max_pain():
@@ -74,14 +130,13 @@ def calculate_max_pain():
     # create a dataframe out of the max pain calculations, merge it with the selected expiry dataframe
     df_max_pain_calcs = pd.DataFrame(max_pain_calcs)
     df_selected = pd.merge(df_selected, df_max_pain_calcs, left_index=True, right_index=True)
-    print('df_selected: ', df_selected)
-    print('unique_strikes_selected: ', unique_strikes_selected)
+    # print('df_selected: ', df_selected)
+    # print('unique_strikes_selected: ', unique_strikes_selected)
     return df_selected, unique_strikes_selected
 
 
 def plot_charts():
     # Clears any current charts, then plots all charts using selected parameters
-
     # Destroy old charts if any
     for widgets in chart1_frame.winfo_children():
         widgets.destroy()
@@ -107,7 +162,7 @@ def plot_charts():
     for strike in unique_strikes_selected:
         total_intrinsic.append(df_selected[str(strike)].sum())
     df_calls = df_calls.assign(total_intrinsic=total_intrinsic)
-    print('df_calls: ', df_calls)
+    # print('df_calls: ', df_calls)
 
     # Intrinsic value plot
     plot1_b = plot1.twinx()
@@ -125,7 +180,7 @@ def plot_charts():
 
     plot1.set_xlabel('Price')
     plot1.set_ylabel('Open Interest')
-    plot1.set_title('Open Interest and Max Pain')
+    plot1.set_title('Open Interest and Max Pain (' + selected_currency.get() + ' ' + selected_expiry.get() + ')')
     plot1.legend()
     plot1.grid(True, alpha=0.25)
 
@@ -144,14 +199,7 @@ def plot_charts():
     plt.show()
 
 
-# button that displays the plot
-plot_button = Button(master=details_frame,
-                     command=plot_charts,
-                     height=1,
-                     width=18,
-                     text="Plot Chart",
-                     bg="#88bb88")
-
-plot_button.grid(row=7, column=0, columnspan=2)
+details_state_1()
+plot_charts()
 
 root.mainloop()
