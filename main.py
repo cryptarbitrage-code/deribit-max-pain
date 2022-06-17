@@ -55,6 +55,7 @@ def fetch_data(currency):
 
 
 def details_state_1():
+    # details_frame: State 1
     currency = selected_currency.get()
     # set variables to global so plot_charts gets the updated values
     # without having to fetch data from the API for every plot
@@ -90,7 +91,7 @@ def details_state_1():
 
 
 def details_state_2():
-    # details frame: State 2
+    # details_frame: State 2
     for widgets in details_frame.winfo_children():
         widgets.destroy()
 
