@@ -131,8 +131,7 @@ def calculate_max_pain():
     # create a dataframe out of the max pain calculations, merge it with the selected expiry dataframe
     df_max_pain_calcs = pd.DataFrame(max_pain_calcs)
     df_selected = pd.merge(df_selected, df_max_pain_calcs, left_index=True, right_index=True)
-    # print('df_selected: ', df_selected)
-    # print('unique_strikes_selected: ', unique_strikes_selected)
+
     return df_selected, unique_strikes_selected
 
 
